@@ -1,6 +1,6 @@
 /* CribSheet service worker: caches the app shell so it opens offline. */
-const VERSION = 'cribsheet-v1';
-const SHELL = ['./', './index.html', './app.js', './firebase-config.js', './site.webmanifest', './brand/cardone-symbol-white.svg', './brand/cardone-horizontal-white.svg', './favicon.svg', './favicon-192.png', './favicon-512.png', './apple-touch-icon.png'];
+const VERSION = 'cribsheet-v2';
+const SHELL = ['./', './index.html', './app.js', './firebase-config.js', './growth-data.js', './site.webmanifest', './brand/cardone-symbol-white.svg', './brand/cardone-horizontal-white.svg', './favicon.svg', './favicon-192.png', './favicon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', ev => {
   ev.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

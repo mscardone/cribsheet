@@ -6,25 +6,32 @@ Live site: https://projects.scottcardone.com/cribsheet/
 
 ## What it does
 
-- **Nursing** with a timer. It tells you which breast to start on (alternating from the last feed), you tap Start on that side, tap Switch when you change sides, and tap Finish to log the feed automatically with time on each side. The timer survives locking the phone. You can also log a feed by hand with a start time and minutes per side.
-- **Bottles** in oz or mL, marked as breast milk or formula.
+- **Feeds** in one entry, however the feed went: nursing, bottle, syringe, or nursing finished with a bottle or syringe. The nursing timer tells you which breast to start on (alternating from the last feed), you tap Start on that side, Switch when you change sides, and Finish to log it. If you top up with a bottle or syringe, add the amount on the timer screen before Finish and it all goes in the same entry. The timer survives locking the phone. You can also log a feed by hand with a start time, minutes per side, and an amount in oz or mL, marked breast milk or formula.
+- **Sleep** with one button. Tap **Sleep** when the baby falls asleep and the button turns into **Wake up** with a running clock; tap it when they wake and the sleep is logged. The in-progress sleep is stored in the log itself, so it survives closing the app and shows on the other parent's phone too. Tap **adjust** on the Home tab to backdate the start, or **log past sleep** if you forgot to start it. Sleep that starts inside the night window (7 PM to 7 AM by default, adjustable in Settings) counts as overnight; the rest are naps, and you can override either per entry.
 - **Diapers** as wet, dirty, or both.
 - **Measurements**: weight in lb + oz or grams, length and head circumference in inches or cm. Enter whichever ones you have.
+- **Growth charts** like the ones in a pediatric office: each measurement plotted by age against the WHO Child Growth Standards for the baby's sex (birth to 24 months, as published by the CDC and used by US pediatricians under age 2), with the 1st, 25th, 50th, 75th and 99th percentile curves, and the percentile for each reading.
 - **Pumping** on its own tab, built to be fast: amount and time, done.
-- **Dashboard** with totals for today, the last 24 hours, and a daily average computed over the trailing 7 days (or over however many days you have logged so far, if fewer).
-- **Right now** card: time since the last feed, last diaper, and last pump, plus which side to start on next.
+- **Dashboard** with totals for today, the last 24 hours, and a daily average computed over the trailing 7 days (or over however many days you have logged so far, if fewer). Covers feeds, nursing time by side, bottle or syringe volume split by breast milk and formula, total sleep, overnight sleep, nap time and count, diapers, and pumping.
+- **Right now** card: time since the last feed, when the next one is due, whether the baby is asleep or how long they have been awake, last diaper, last pump, latest weight, and which side to start on next.
+- **Feed reminders** (Settings): pick an interval (3 hours by default, counted from the start of the last feed). The Home tab shows a countdown and turns amber, then red, as the feed comes due. With notifications allowed, a notification fires when the interval passes while CribSheet is open or in the background. See the note below on what it cannot do.
 - **Log** of everything, grouped by day, filterable by type. Tap any entry to edit or delete it (with undo).
-- **Growth** tab with a plain line chart for each measurement and the change since the last reading.
-- **Multiple babies** with a switcher in the header. Pumping is shared across babies.
+- **Multiple babies** with a switcher in the header. Each profile has a name, sex, birth date and optional birth time, and optional birth weight, length and head circumference, which become the first measurement on the growth charts. Pumping is shared across babies.
 - **Export** to CSV for the pediatrician, JSON backup and restore, and dark mode for night feeds.
 - **Sync between phones** through a free Firebase project, so both parents see the same log in real time.
+- **Install** card in Settings with an Install button on Android and Chrome, and instructions on iPhone.
 
 Every time field defaults to now and can be changed, so you can log something that happened earlier.
+
+### What feed reminders cannot do
+
+A static site has no server, so it cannot wake a closed app to send a push notification. Reminders fire when CribSheet is open, in a background tab, or installed on Android and still in memory. On iPhone, notifications only work for an installed home-screen app and only through server push, which CribSheet does not have, so iPhone gets the on-screen countdown but no banner. True push while the app is closed would need a small scheduled job (a Cloud Function or a GitHub Actions cron) holding push keys; that is a possible later addition.
 
 ## Files
 
 - `index.html`: markup and styles.
 - `app.js`: all of the logic. No build step, no bundler.
+- `growth-data.js`: WHO growth standard LMS parameters (birth to 24 months, boys and girls) from the CDC data files, used to draw percentile curves and compute percentiles.
 - `firebase-config.js`: the Firebase web config that turns on sync. Blank it out for local-only mode.
 - `sw.js`: service worker that caches the app for offline use.
 - `site.webmanifest`, `favicon*`, `apple-touch-icon.png`: install icons from the Cardone Medical Consulting brand package.
@@ -75,7 +82,7 @@ To run with no sync at all, blank out `apiKey` and `projectId` in `firebase-conf
 
 ## Data model
 
-Entries live in one list and carry a `type`: `nurse`, `bottle`, `diaper`, `pump`, or `measure`. Volumes are stored in mL and weights in grams, with the unit you typed kept alongside so edits show what you entered. Local mode stores everything in `localStorage`; sync mode stores it under `households/<code>/entries` and `households/<code>/babies` in Firestore.
+Entries live in one list and carry a `type`: `feed`, `sleep`, `diaper`, `pump`, or `measure`. A feed can hold nursing seconds per side and a bottle or syringe volume at once. A sleep has a start and an end; an end of `null` means still asleep. Entries written by early versions as `nurse` or `bottle` are read as feeds. Volumes are stored in mL and weights in grams, with the unit you typed kept alongside so edits show what you entered. Local mode stores everything in `localStorage`; sync mode stores it under `households/<code>/entries` and `households/<code>/babies` in Firestore.
 
 ## Disclaimer
 
