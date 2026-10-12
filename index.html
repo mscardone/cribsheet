@@ -46,10 +46,13 @@ button{cursor:pointer;touch-action:manipulation}
 /* Header */
 header.top{background:var(--teal);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 header.top .mark{width:40px;height:40px;flex:0 0 auto}
-header.top .title{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+header.top .title{display:flex;flex-direction:column;line-height:1.15;min-width:0;overflow:hidden;flex:1 1 auto}
 header.top .title h1{margin:0;font-size:1.45rem;letter-spacing:.4px;font-weight:700}
-header.top .title span{font-size:.62rem;color:var(--sea);letter-spacing:1.3px;text-transform:uppercase;white-space:nowrap}
+header.top .title span{font-size:.62rem;color:var(--sea);letter-spacing:1.3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .baby{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:6px 12px;text-align:right;line-height:1.2;max-width:44%;min-height:40px;flex:0 0 auto}
+header.top .baby{display:flex;align-items:center;gap:8px}
+header.top .baby .txt{display:flex;flex-direction:column;min-width:0;text-align:right}
+header.top .baby .avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:1.5px solid rgba(255,255,255,.6);background:#fff}
 header.top .baby b{display:block;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .baby small{font-size:.72rem;color:var(--sea);letter-spacing:.5px;white-space:nowrap}
 
@@ -88,10 +91,10 @@ main{max-width:560px;margin:0 auto;padding:0 16px 24px}
 .seg.sm button{min-height:36px;padding:6px 12px;font-size:.88rem}
 
 /* Quick log grid */
-.quick{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}
-.quick button{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px 6px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink);font-weight:600;box-shadow:var(--shadow);grid-column:span 2}
+.quick{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;margin:12px 0}
+.quick button{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px 6px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink);font-weight:600;box-shadow:var(--shadow);grid-column:span 3;padding:12px 4px;font-size:.92rem}
 .quick button small{font-weight:600;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:-4px}
-.quick button.feed,.quick button.sleep{grid-column:span 3;min-height:96px}
+.quick button.feed,.quick button.sleep{grid-column:span 6;min-height:96px;font-size:1rem}
 .quick button.sleep.on{background:#1b2a4a;border-color:#1b2a4a;color:#fff}
 .quick button.sleep.on .ic{color:#ffd166}
 .quick button.sleep.on small{color:#c9d4ea}
@@ -104,6 +107,7 @@ main{max-width:560px;margin:0 auto;padding:0 16px 24px}
 .quick button.diaper .ic{color:var(--amber)}
 .quick button.measure .ic{color:var(--right)}
 .quick button.pump .ic{color:var(--formula)}
+.quick button.med .ic{color:var(--red)}
 
 /* Now card */
 .now{display:grid;grid-template-columns:1fr;gap:0}
@@ -149,7 +153,7 @@ table.totals tr.group:first-child td{padding-top:4px}
 .entry:first-child{border-top:0}
 .entry:hover{background:var(--soft)}
 .entry .ic{width:26px;height:26px;flex:0 0 auto}
-.entry .ic.feed{color:var(--accent)}.entry .ic.sleep{color:#4a5f8f}.entry .ic.diaper{color:var(--amber)}.entry .ic.measure{color:var(--right)}.entry .ic.pump{color:var(--formula)}
+.entry .ic.feed{color:var(--accent)}.entry .ic.sleep{color:#4a5f8f}.entry .ic.med{color:var(--red)}.entry .ic.diaper{color:var(--amber)}.entry .ic.measure{color:var(--right)}.entry .ic.pump{color:var(--formula)}
 .entry .body{flex:1;min-width:0}
 .entry .body b{display:block;font-size:.95rem}
 .entry .body span{display:block;color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -182,6 +186,29 @@ details.more>summary::-webkit-details-marker{display:none}
 details.more>summary::before{content:"+";font-size:1.2rem;line-height:1}
 details.more[open]>summary::before{content:"–"}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:.85rem;text-decoration:underline;text-underline-offset:2px}
+.medlist{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.medlist button{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:12px 10px;min-height:72px;text-align:left;color:var(--ink);display:flex;flex-direction:column;justify-content:center;gap:2px}
+.medlist button b{font-size:.98rem}
+.medlist button span{font-size:.78rem;color:var(--muted)}
+.medlist button:hover{border-color:var(--teal)}
+.medlist button.locked{opacity:.45;cursor:not-allowed;background:var(--soft)}
+.medlist button.locked:hover{border-color:var(--line)}
+.medlist button.locked span{color:var(--red)}
+.math{background:var(--soft);border-radius:12px;padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86rem;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.math b{font-size:1.15rem;color:var(--teal-ink)}
+.dose{display:flex;align-items:baseline;gap:10px;margin:8px 0 2px}
+.dose .big{font-size:2rem;font-weight:800;color:var(--teal-ink);font-variant-numeric:tabular-nums}
+.dose .mg{color:var(--muted)}
+.guard{border-radius:12px;padding:10px 12px;font-size:.88rem;margin:10px 0;background:var(--sea-light);color:var(--teal-ink)}
+.guard.warn{background:var(--amber-soft);color:#5a3a0a}
+.guard.bad{background:var(--red-soft);color:#6b1f14;font-weight:600}
+:root[data-theme="dark"] .guard.warn{color:#f3d9a4}
+:root[data-theme="dark"] .guard.bad{color:#f6b8ad}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .guard.warn{color:#f3d9a4}:root:not([data-theme="light"]) .guard.bad{color:#f6b8ad}}
+.photo-row{display:flex;align-items:center;gap:12px}
+.photo-row .avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;border:1.5px solid var(--line);background:var(--soft)}
+.photo-row .avatar.empty{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.4rem}
+.list .li .avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:1px solid var(--line)}
 .err{color:var(--red);font-size:.88rem;margin:8px 0 0}
 
 /* Side chooser (nursing) */
@@ -261,6 +288,7 @@ footer a{color:#fff}
   <symbol id="i-nurse" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.4-7 10-7 10z"/><circle cx="12" cy="11" r="1.2" fill="currentColor"/></symbol>
   <symbol id="i-sleep" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M16 3h3M17.5 1.5v3M20 7h2M21 6v2"/></symbol>
   <symbol id="i-feed" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9.5 20S3 15.8 3 10.8a3.6 3.6 0 0 1 6.5-2.3A3.6 3.6 0 0 1 16 10.8c0 .5-.1 1-.2 1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16 10h3v1.6a2 2 0 0 1 1 1.7V21a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-7.7a2 2 0 0 1 1-1.7V10z"/><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M15.5 16h3.5"/></symbol>
+  <symbol id="i-med" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 2h6M10.5 2v3.5L6 13v6a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-6l-4.5-7.5V2"/><path stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M7.5 15h9"/></symbol>
   <symbol id="i-bottle" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 2h4v2.5a3 3 0 0 1 1.5 2.6V8h-7V7.1A3 3 0 0 1 10 4.5V2zM8 8h8v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8z"/><path stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 13h6M9 16.5h6"/></symbol>
   <symbol id="i-diaper" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v3a8 8 0 0 1-16 0V7z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 10c3 0 5 2 5 5M20 10c-3 0-5 2-5 5"/></symbol>
   <symbol id="i-measure" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 17 17 3l4 4L7 21H3v-4z"/><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="m8 12 2 2M11 9l2 2M14 6l2 2"/></symbol>
@@ -274,7 +302,7 @@ footer a{color:#fff}
 <header class="top">
   <img class="mark" src="brand/cardone-symbol-white.svg" alt="Cardone Medical Consulting">
   <div class="title"><h1>CribSheet</h1><span>Feeds · Diapers · Growth · Sleep</span></div>
-  <button class="baby" id="babyBtn" type="button" aria-label="Switch baby"><b id="babyName">Set up baby</b><small id="babyAge">Tap to begin</small></button>
+  <button class="baby" id="babyBtn" type="button" aria-label="Switch baby"><img class="avatar" id="babyPic" alt="" hidden><span class="txt"><b id="babyName">Set up baby</b><small id="babyAge">Tap to begin</small></span></button>
 </header>
 
 <main>
@@ -293,6 +321,7 @@ footer a{color:#fff}
     <button type="button" class="diaper" data-log="diaper"><svg class="ic"><use href="#i-diaper"/></svg><span>Diaper</span></button>
     <button type="button" class="measure" data-log="measure"><svg class="ic"><use href="#i-measure"/></svg><span>Measure</span></button>
     <button type="button" class="pump" data-log="pump"><svg class="ic"><use href="#i-pump"/></svg><span>Pump</span></button>
+    <button type="button" class="med" data-log="med"><svg class="ic"><use href="#i-med"/></svg><span>Meds</span></button>
   </div>
 
   <section class="card">
@@ -313,6 +342,7 @@ footer a{color:#fff}
     <button class="chip" type="button" data-f="all" aria-pressed="true">All</button>
     <button class="chip" type="button" data-f="feed" aria-pressed="false">Feeds</button>
     <button class="chip" type="button" data-f="sleep" aria-pressed="false">Sleep</button>
+    <button class="chip" type="button" data-f="med" aria-pressed="false">Meds</button>
     <button class="chip" type="button" data-f="diaper" aria-pressed="false">Diapers</button>
     <button class="chip" type="button" data-f="pump" aria-pressed="false">Pumping</button>
     <button class="chip" type="button" data-f="measure" aria-pressed="false">Growth</button>

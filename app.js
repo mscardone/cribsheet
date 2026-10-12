@@ -158,6 +158,62 @@ const activeSleep = () => babyEntries().find(e => e.type === 'sleep' && !e.end) 
 const sleepEnd = e => e.end || Date.now();
 const lastFeed = () => babyEntries().find(e => e.type === 'feed') || null;
 
+// ---------- medicines ----------
+const MEDS = {
+  acetaminophen: { key: 'acetaminophen', generic: 'acetaminophen', name: 'Infant Tylenol', sub: 'acetaminophen 160 mg/5 mL', mgPerKg: 15, mgPerMl: 32, conc: '160 mg/5 mL', intervalH: 6, maxPerDay: 5, minMonths: 0 },
+  ibuprofenInfant: { key: 'ibuprofenInfant', generic: 'ibuprofen', name: 'Infant Motrin', sub: 'ibuprofen 50 mg/1.25 mL', mgPerKg: 10, mgPerMl: 40, conc: '50 mg/1.25 mL', intervalH: 6, maxPerDay: 4, minMonths: 6 },
+  ibuprofenChild: { key: 'ibuprofenChild', generic: 'ibuprofen', name: "Children's Motrin", sub: 'ibuprofen 100 mg/5 mL', mgPerKg: 10, mgPerMl: 20, conc: '100 mg/5 mL', intervalH: 6, maxPerDay: 4, minMonths: 6 },
+  simethicone: { key: 'simethicone', generic: 'simethicone', name: 'Simethicone', sub: 'gas drops 20 mg/0.3 mL', bracket: 'simethicone', conc: '20 mg/0.3 mL', intervalH: 0, maxPerDay: 12, minMonths: 0 },
+  cetirizine: { key: 'cetirizine', generic: 'cetirizine', name: 'Cetirizine', sub: "children's Zyrtec 1 mg/mL", bracket: 'cetirizine', conc: '1 mg/mL', intervalH: 24, maxPerDay: 1, minMonths: 6 },
+  vitd: { key: 'vitd', generic: 'vitamin D', name: 'Vitamin D', sub: '400 IU once daily', fixed: '400 IU', intervalH: 24, maxPerDay: 1, minMonths: 0 },
+  amoxicillin: { key: 'amoxicillin', generic: 'amoxicillin', name: 'Amoxicillin', sub: 'from the prescribed mg/kg/day', rx: true, minMonths: 0 },
+  custom: { key: 'custom', generic: 'custom', name: 'Other medicine', sub: 'name and dose typed in', minMonths: 0 }
+};
+const MED_ORDER = ['acetaminophen', 'ibuprofenInfant', 'ibuprofenChild', 'simethicone', 'cetirizine', 'vitd', 'amoxicillin', 'custom'];
+function monthsOld(b) { if (!b || !b.dob) return null; const [y, m, d] = b.dob.split('-').map(Number); const now = new Date(); let months = (now.getFullYear() - y) * 12 + (now.getMonth() - (m - 1)); if (now.getDate() < d) months--; return Math.max(0, months); }
+const latestWeight = () => babyEntries().find(e => e.type === 'measure' && e.weightG != null) || null;
+const roundMl = ml => Math.round(ml * 10) / 10;
+const weightLine = kg => `Weight ${fmtWeight(kg * 1000, 'lb')} = ${trim(kg * 1000, 0)} g = ${trim(kg, 2)} kg`;
+function medMaxPerDay(def, b) { if (def.key === 'cetirizine' && (monthsOld(b) ?? 0) >= 12) return 2; return def.maxPerDay || 0; }
+function medGuard(def, atMs, excludeId) {
+  const gen = def.generic; if (gen === 'custom') return null;
+  const b = activeBaby();
+  const mine = babyEntries().filter(e => e.type === 'med' && e.generic === gen && e.id !== excludeId && e.at <= atMs);
+  const last = mine[0] || null;
+  const count = mine.filter(e => e.at > atMs - DAY).length;
+  const max = medMaxPerDay(def, b);
+  const parts = []; let cls = '';
+  if (last) {
+    const agoTxt = `${fmtDur((atMs - last.at) / 60000)} before this dose, at ${fmtTime(last.at)}`;
+    if (def.intervalH && atMs < last.at + def.intervalH * 3600000) { cls = 'bad'; parts.push(`Too soon: last ${gen} dose was ${agoTxt}. Earliest next dose ${fmtTime(last.at + def.intervalH * 3600000)}.`); }
+    else parts.push(`Last ${gen} dose was ${agoTxt}.`);
+  } else parts.push(`No ${gen} logged yet.`);
+  if (max) { parts.push(`${count} of ${max} doses in the 24 h before this one.`); if (count >= max) cls = 'bad'; else if (!cls && count === max - 1) cls = 'warn'; }
+  return { cls, text: parts.join(' ') };
+}
+function computeDose(def, kg, b, o) {
+  if (def.mgPerKg) {
+    const mg = kg * def.mgPerKg, mlExact = mg / def.mgPerMl, ml = roundMl(mlExact);
+    return { ml, mg, lines: [weightLine(kg), `${trim(kg, 2)} kg × ${def.mgPerKg} mg/kg = ${trim(mg, 1)} mg`, `${def.conc} = ${trim(def.mgPerMl, 1)} mg/mL`, `${trim(mg, 1)} mg ÷ ${trim(def.mgPerMl, 1)} mg/mL = ${trim(mlExact, 2)} mL`, `Rounded to the nearest 0.1 mL`] };
+  }
+  if (def.bracket === 'simethicone') {
+    const months = monthsOld(b); const lb = kg * 2.20462;
+    const big = (months != null && months >= 24) || lb >= 24;
+    const mg = big ? 40 : 20, ml = big ? 0.6 : 0.3;
+    return { ml, mg, lines: [`${weightLine(kg)}${months != null ? `; age ${months} mo` : ''}`, big ? '24 lb or 2 years and over: 40 mg' : 'Under 24 lb and under 2 years: 20 mg', `20 mg per 0.3 mL, so ${mg} mg = ${ml} mL`, 'As needed. Up to 12 doses per day.'] };
+  }
+  if (def.bracket === 'cetirizine') {
+    const months = monthsOld(b) ?? 0;
+    const mg = months >= 24 && o.high ? 5 : 2.5, ml = mg;
+    return { ml, mg, lines: [`Age ${months} mo`, months < 12 ? '6 to 11 months: 2.5 mg once daily' : months < 24 ? '12 to 23 months: 2.5 mg once daily, may repeat once after 12 h' : '2 to 5 years: 2.5 to 5 mg once daily', `1 mg/mL, so ${mg} mg = ${ml} mL`] };
+  }
+  if (def.key === 'amoxicillin') {
+    const mgDay = kg * o.mgKgDay, mg = mgDay / o.dosesPerDay, mlExact = mg / o.mgPerMl, ml = roundMl(mlExact);
+    return { ml, mg, lines: [weightLine(kg), `${trim(kg, 2)} kg × ${o.mgKgDay} mg/kg/day = ${trim(mgDay, 0)} mg/day`, `${trim(mgDay, 0)} mg ÷ ${o.dosesPerDay} doses = ${trim(mg, 0)} mg per dose`, `${o.concLabel} = ${trim(o.mgPerMl, 0)} mg/mL`, `${trim(mg, 0)} mg ÷ ${trim(o.mgPerMl, 0)} mg/mL = ${trim(mlExact, 2)} mL`, 'Rounded to the nearest 0.1 mL'] };
+  }
+  return null;
+}
+
 function doWrite(p, okMsg) {
   Promise.resolve(p).then(() => { if (okMsg) toast(okMsg); }).catch(err => { console.error(err); toast('Could not save: ' + (err.message || err)); });
 }
@@ -233,6 +289,7 @@ function renderHeader() {
   const b = activeBaby();
   $('#babyName').textContent = b ? b.name : 'Set up baby';
   $('#babyAge').textContent = b ? (ageText(b) || 'Add a birthdate') : 'Tap to begin';
+  const pic = $('#babyPic'); if (b && b.photo) { pic.src = b.photo; pic.hidden = false; } else { pic.hidden = true; pic.removeAttribute('src'); }
 }
 
 function feedParts(e) {
@@ -254,6 +311,14 @@ function entrySummary(e, full = false) {
       const kind = (e.kind || 'nap') === 'night' ? 'Overnight' : 'Nap';
       if (!e.end) return { title: `Sleeping · since ${fmtTime(e.at)}`, detail: `${kind} · ${fmtDur((Date.now() - e.at) / 60000)} so far` + (e.note ? ' · ' + e.note : '') };
       return { title: `Slept ${fmtDur((e.end - e.at) / 60000)} · ${kind}`, detail: `${fmtTime(e.at)} to ${fmtTime(e.end)}` + (e.note ? ' · ' + e.note : '') };
+    }
+    case 'med': {
+      const dose = e.ml != null ? `${trim(e.ml, 1)} mL` : (e.doseText || '');
+      const d = [];
+      if (e.mg != null) d.push(`${trim(e.mg, 1)} mg`);
+      if (e.weightKg) d.push(`dosed at ${trim(e.weightKg, 2)} kg`);
+      if (e.note) d.push(e.note);
+      return { title: `${e.name || 'Medicine'}${dose ? ' · ' + dose : ''}`, detail: d.join(' · ') };
     }
     case 'diaper': return { title: `Diaper · ${e.kind === 'both' ? 'Wet + dirty' : e.kind === 'dirty' ? 'Dirty' : 'Wet'}`, detail: e.note || '' };
     case 'pump': return { title: `Pumped · ${fmtVol(e.ml, e.unit || prefs.pumpUnit)}`, detail: e.note || '' };
@@ -296,6 +361,9 @@ function renderHome() {
   else html += item('Sleep', lastSleep ? 'Awake ' + fmtDur((now - lastSleep.end) / 60000) : '—', (lastSleep ? `Last slept ${fmtDur((lastSleep.end - lastSleep.at) / 60000)} · ` : '') + `<button class="linkbtn" type="button" id="logSleepPast">log past sleep</button>`);
   html += item('Last diaper', lastDiaper ? ago(lastDiaper.at) : '—', lastDiaper ? `${entrySummary(lastDiaper).title.replace('Diaper · ', '')} · ${fmtTime(lastDiaper.at)}` : 'No diapers logged yet');
   html += item('Last pump', lastPump ? ago(lastPump.at) : '—', lastPump ? `${fmtVol(lastPump.ml, prefs.pumpUnit)} · ${fmtTime(lastPump.at)}` : 'No pumps logged yet');
+  const lastMed = list.find(e => e.type === 'med' && e.med !== 'vitd');
+  if (lastMed) { const def = MEDS[lastMed.med]; const next = def && def.intervalH ? lastMed.at + def.intervalH * 3600000 : null; html += item('Last med', ago(lastMed.at), `${entrySummary(lastMed).title} · ${fmtTime(lastMed.at)}${next ? (now < next ? ` · next OK ${fmtTime(next)}` : ' · next dose OK') : ''}`, next && now < next ? 'warn' : ''); }
+  if (list.some(e => e.type === 'med' && e.med === 'vitd')) { const vd = list.find(e => e.type === 'med' && e.med === 'vitd' && e.at >= startOfDay(now)); html += item('Vitamin D', vd ? 'Given ✓' : 'Not yet', vd ? `today at ${fmtTime(vd.at)}` : 'not given today', vd ? '' : 'warn'); }
   if (lastWeight) html += item('Weight', fmtWeight(lastWeight.weightG, prefs.weightUnit), fmtDay(lastWeight.at));
   $('#now').innerHTML = html;
   const ns = $('#nextside');
@@ -340,6 +408,8 @@ function feedRows() {
     { label: 'Wet', fn: count(e => e.type === 'diaper' && e.kind !== 'dirty'), fmt: cnt },
     { label: 'Dirty', fn: count(e => e.type === 'diaper' && e.kind !== 'wet'), fmt: cnt },
     { label: 'Diaper changes', fn: count(isType('diaper')), fmt: cnt },
+    { group: 'Meds' },
+    { label: 'Med doses', fn: count(isType('med')), fmt: cnt, parts: l => { const m = new Map(); l.filter(isType('med')).forEach(e => m.set(e.name || 'Other', (m.get(e.name || 'Other') || 0) + 1)); return [...m.entries()]; } },
     { group: 'Pumping' },
     ...pumpRows()
   ];
@@ -383,7 +453,7 @@ function renderLog() {
   for (const [k, es] of groups) {
     const n = pred => es.filter(pred).length;
     const sleepMin = es.filter(e => e.type === 'sleep' && e.end).reduce((s, e) => s + (e.end - e.at) / 60000, 0);
-    const sum = [n(isType('feed')) ? `${n(isType('feed'))} feed${n(isType('feed')) > 1 ? 's' : ''}` : '', sleepMin ? `${fmtDur(sleepMin)} sleep` : '', n(isType('diaper')) ? `${n(isType('diaper'))} diaper${n(isType('diaper')) > 1 ? 's' : ''}` : '', n(isType('pump')) ? `${n(isType('pump'))} pump${n(isType('pump')) > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+    const sum = [n(isType('feed')) ? `${n(isType('feed'))} feed${n(isType('feed')) > 1 ? 's' : ''}` : '', sleepMin ? `${fmtDur(sleepMin)} sleep` : '', n(isType('diaper')) ? `${n(isType('diaper'))} diaper${n(isType('diaper')) > 1 ? 's' : ''}` : '', n(isType('pump')) ? `${n(isType('pump'))} pump${n(isType('pump')) > 1 ? 's' : ''}` : '', n(isType('med')) ? `${n(isType('med'))} med${n(isType('med')) > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
     h += `<div class="day"><h3>${fmtDay(k)}</h3><span class="sum">${sum}</span></div><div class="entries">${es.map(entryRow).join('')}</div>`;
   }
   out.innerHTML = h;
@@ -496,7 +566,7 @@ function chartSvg(pts, axisFmt, dob) {
 function dayLabel(t, dob) { const [y, m, d] = dob.split('-').map(Number); const days = Math.round((startOfDay(t) - new Date(y, m - 1, d).getTime()) / DAY); return days < 0 ? fmtDate(t) : `Day ${days} · ${fmtDate(t)}`; }
 
 function renderSettings() {
-  $('#babyList').innerHTML = babies.length ? babies.map(b => `<div class="li"><div class="body"><b>${esc(b.name)}${b.id === prefs.activeBaby ? ' <span class="muted small">· active</span>' : ''}</b><span>${b.sex === 'boy' ? 'Boy' : b.sex === 'girl' ? 'Girl' : 'Sex not set'} · ${b.dob ? 'Born ' + new Date(b.dob + 'T00:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + (b.tob ? ' at ' + fmtTime(birthMs(b)) : '') + ' · ' + ageText(b) : 'No birthdate'}</span></div>${b.id !== prefs.activeBaby ? `<button class="btn" type="button" data-select="${b.id}">Select</button>` : ''}<button class="btn" type="button" data-edit="${b.id}">Edit</button></div>`).join('') : '<div class="li"><div class="body muted small">No baby yet. Add one to start logging.</div></div>';
+  $('#babyList').innerHTML = babies.length ? babies.map(b => `<div class="li">${b.photo ? `<img class="avatar" src="${b.photo}" alt="">` : ''}<div class="body"><b>${esc(b.name)}${b.id === prefs.activeBaby ? ' <span class="muted small">· active</span>' : ''}</b><span>${b.sex === 'boy' ? 'Boy' : b.sex === 'girl' ? 'Girl' : 'Sex not set'} · ${b.dob ? 'Born ' + new Date(b.dob + 'T00:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + (b.tob ? ' at ' + fmtTime(birthMs(b)) : '') + ' · ' + ageText(b) : 'No birthdate'}</span></div>${b.id !== prefs.activeBaby ? `<button class="btn" type="button" data-select="${b.id}">Select</button>` : ''}<button class="btn" type="button" data-edit="${b.id}">Edit</button></div>`).join('') : '<div class="li"><div class="body muted small">No baby yet. Add one to start logging.</div></div>';
   $$('[data-pref]').forEach(seg => { const k = seg.dataset.pref; $$('button', seg).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === prefs[k]))); });
   if (document.activeElement !== $('#nightStart')) $('#nightStart').value = prefs.nightStart;
   if (document.activeElement !== $('#nightEnd')) $('#nightEnd').value = prefs.nightEnd;
@@ -605,6 +675,7 @@ function openLog(type, entry) {
   if (type === 'diaper') return openDiaper(entry);
   if (type === 'measure') return openMeasure(entry);
   if (type === 'pump') return openPump(entry);
+  if (type === 'med') return entry ? openMedCalc(MEDS[entry.med] || MEDS.custom, entry) : openMeds();
 }
 
 function submitEntry(root, entry, build, msg) {
@@ -768,6 +839,86 @@ function openSleepForm(e) {
   });
 }
 
+// ---------- medicines ----------
+function openMeds() {
+  const b = activeBaby(); const months = monthsOld(b);
+  openSheet(`<h2>Meds</h2><p class="sub">${b ? `${esc(b.name)}, ${months} month${months === 1 ? '' : 's'} old. ` : ''}Doses come from the latest logged weight, with the math shown so you can check it.</p>
+    <div class="medlist">${MED_ORDER.map(k => { const d = MEDS[k]; const locked = (months ?? 0) < d.minMonths; return `<button type="button" data-med="${k}" class="${locked ? 'locked' : ''}"${locked ? ' aria-disabled="true"' : ''}><b>${d.name}</b><span>${locked ? `Not before ${d.minMonths} months` : d.sub}</span></button>`; }).join('')}</div>
+    <div class="actions"><button class="btn" type="button" data-close>Cancel</button></div>`, root => {
+    $$('[data-med]', root).forEach(x => x.onclick = () => {
+      const d = MEDS[x.dataset.med];
+      if (x.classList.contains('locked')) { toast(`${d.name} is not recommended before ${d.minMonths} months`); return; }
+      openMedCalc(d, null);
+    });
+  });
+}
+function openMedCalc(def, e) {
+  const b = activeBaby();
+  const lw = latestWeight();
+  const kg0 = e && e.weightKg ? e.weightKg : lw ? lw.weightG / 1000 : null;
+  const wu = prefs.weightUnit;
+  const needsWeight = !!(def.mgPerKg || def.bracket === 'simethicone' || def.rx);
+  let lb = '', oz = '', g = '';
+  if (kg0) { const grams = kg0 * 1000; g = Math.round(grams); const tOz = grams / LB * 16; lb = Math.floor(tOz / 16); oz = trim(tOz - lb * 16, 1); }
+  const weightHtml = needsWeight ? `<div class="field"><label>Weight used for the dose${lw && !(e && e.weightKg) ? ` <span class="muted">(logged ${fmtDay(lw.at).toLowerCase()})</span>` : ''}</label>
+      ${wu === 'g' ? `<div class="with-unit"><input type="number" id="w-g" inputmode="numeric" min="0" step="1" placeholder="0" value="${g}"><span class="unit">g</span></div>` : `<div class="pair"><div class="with-unit"><input type="number" id="w-lb" inputmode="numeric" min="0" step="1" placeholder="0" value="${lb}"><span class="unit">lb</span></div><div class="with-unit"><input type="number" id="w-oz" inputmode="decimal" min="0" max="16" step="0.1" placeholder="0" value="${oz}"><span class="unit">oz</span></div></div>`}
+      ${!lw && !kg0 ? '<p class="hint">No weight logged yet. Enter one here, or log a measurement first.</p>' : ''}</div>` : '';
+  const months = monthsOld(b) ?? 0;
+  let extra = '';
+  if (def.key === 'amoxicillin') extra = `<div class="field"><label>Prescribed dose</label><div class="inline"><input type="number" id="a-mgkg" inputmode="numeric" min="1" step="1" value="${e && e.mgKgDay ? e.mgKgDay : 45}"><span class="unit">mg/kg/day</span>${segHtml('a-preset', [['45', '45'], ['90', '90']], e && e.mgKgDay ? String(e.mgKgDay) : '45', 'sm')}</div><p class="hint">Use the number on the prescription label.</p></div>
+    <div class="field"><label>Doses per day</label>${segHtml('a-freq', [['2', '2 (every 12 h)'], ['3', '3 (every 8 h)']], e && e.dosesPerDay ? String(e.dosesPerDay) : '2', 'block')}</div>
+    <div class="field"><label>Concentration</label>${segHtml('a-conc', [['80', '400 mg/5 mL'], ['50', '250 mg/5 mL']], e && e.mgPerMl ? String(e.mgPerMl) : '80', 'block')}</div>`;
+  if (def.key === 'cetirizine' && months >= 24) extra = `<div class="field"><label>Dose</label>${segHtml('c-dose', [['2.5', '2.5 mg'], ['5', '5 mg']], e && e.mg === 5 ? '5' : '2.5', 'block')}</div>`;
+  if (def.key === 'custom') extra = `<div class="field"><label for="m-name">Medicine</label><input type="text" id="m-name" value="${esc(e ? e.name : '')}" placeholder="e.g. Nystatin" required autocomplete="off"></div>
+    <div class="field"><label for="m-dose">Dose</label><input type="text" id="m-dose" value="${esc(e ? e.doseText || '' : '')}" placeholder="e.g. 1 mL, 2 drops each side" autocomplete="off"></div>`;
+  if (def.key === 'vitd') extra = `<div class="field"><label for="m-dose">Amount given <span class="muted">(optional)</span></label><input type="text" id="m-dose" value="${esc(e ? e.doseText || '' : '')}" placeholder="e.g. 1 drop or 1 mL, depending on the brand" autocomplete="off"></div>`;
+  const showDose = !!(def.mgPerKg || def.bracket || def.rx);
+  openSheet(`<h2>${e ? 'Edit ' : ''}${def.name}</h2><p class="sub">${def.key === 'vitd' ? '400 IU once daily.' : def.key === 'custom' ? 'Anything not in the list.' : def.conc ? `${def.generic} ${def.conc}` : ''}${def.intervalH ? ` · every ${def.intervalH} h` : ''}${def.maxPerDay ? ` · max ${medMaxPerDay(def, b)} per day` : ''}</p><form id="med-form">
+    ${weightHtml}${extra}
+    ${showDose ? '<div class="dose"><span class="big" id="dose-ml">—</span><span class="mg" id="dose-mg"></span></div><div class="math" id="dose-math"></div>' : ''}
+    <div id="guard"></div>
+    ${timeField(e ? e.at : Date.now(), 'f-time', 'Given at')}
+    ${noteField(e && e.note)}
+    ${formActions(!!e, e ? 'Save' : 'Log dose')}</form>`, root => {
+    wireSeg(root, (id, v) => { if (id === 'a-preset') $('#a-mgkg', root).value = v; recalc(); });
+    let current = null;
+    const readKg = () => {
+      if (!needsWeight) return null;
+      if (wu === 'g') { const gv = num($('#w-g', root).value); return gv > 0 ? gv / 1000 : null; }
+      const l = num($('#w-lb', root).value) || 0, o = num($('#w-oz', root).value) || 0; return l + o > 0 ? (l * 16 + o) / 16 * LB / 1000 : null;
+    };
+    const opts = () => ({
+      high: segVal('c-dose', root) === '5',
+      mgKgDay: num($('#a-mgkg', root)?.value) || 0, dosesPerDay: Number(segVal('a-freq', root) || 2), mgPerMl: Number(segVal('a-conc', root) || 80), concLabel: segVal('a-conc', root) === '50' ? '250 mg/5 mL' : '400 mg/5 mL'
+    });
+    const recalc = () => {
+      const at = fromInput($('#f-time', root).value);
+      const gd = medGuard(def, at, e && e.id);
+      $('#guard', root).innerHTML = gd ? `<div class="guard ${gd.cls}">${esc(gd.text)}</div>` : '';
+      if (!showDose) return;
+      const kg = readKg(); const o = opts();
+      if ((needsWeight && !kg) || (def.rx && !o.mgKgDay)) { current = null; $('#dose-ml', root).textContent = '—'; $('#dose-mg', root).textContent = ''; $('#dose-math', root).textContent = needsWeight && !kg ? 'Enter a weight to calculate the dose.' : 'Enter the prescribed mg/kg/day.'; return; }
+      current = computeDose(def, kg || 0, b, o);
+      $('#dose-ml', root).textContent = `${trim(current.ml, 1)} mL`;
+      $('#dose-mg', root).textContent = `= ${trim(current.mg, 1)} mg ${def.generic}`;
+      $('#dose-math', root).innerHTML = current.lines.map(esc).join('\n') + `\n<b>Give ${trim(current.ml, 1)} mL</b>`;
+    };
+    $$('input', root).forEach(i => i.addEventListener('input', recalc));
+    $('#f-time', root).addEventListener('change', recalc);
+    recalc();
+    $('#med-form', root).onsubmit = submitEntry(root, e, () => {
+      const at = fromInput($('#f-time', root).value);
+      const base = { type: 'med', babyId: e ? e.babyId : prefs.activeBaby, at, med: def.key, generic: def.generic, name: def.name, note: $('#f-note', root).value.trim() || null };
+      if (def.key === 'custom') { const name = $('#m-name', root).value.trim(); if (!name) throw new Error('Enter the medicine name'); return { ...base, name, doseText: $('#m-dose', root).value.trim() || null, ml: null, mg: null }; }
+      if (def.key === 'vitd') return { ...base, doseText: $('#m-dose', root).value.trim() || '400 IU', ml: null, mg: null };
+      if (!current) throw new Error(needsWeight ? 'Enter a weight first' : 'Enter the dose details');
+      const o = opts();
+      return { ...base, ml: current.ml, mg: Math.round(current.mg * 10) / 10, weightKg: needsWeight ? Math.round(readKg() * 1000) / 1000 : null, ...(def.rx ? { mgKgDay: o.mgKgDay, dosesPerDay: o.dosesPerDay, mgPerMl: o.mgPerMl } : {}) };
+    }, `${def.name} logged`);
+    wireDelete(root, e);
+  });
+}
+
 // diaper
 function openDiaper(e) {
   openSheet(`<h2>${e ? 'Edit diaper' : 'Diaper'}</h2><form id="d-form">
@@ -838,12 +989,28 @@ function openPump(e) {
 }
 
 // babies
+function shrinkPhoto(file, size = 160) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = size; c.height = size; const ctx = c.getContext('2d');
+        const side = Math.min(img.naturalWidth, img.naturalHeight); const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.82));
+      } catch (err) { rej(err); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
+    img.src = url;
+  });
+}
 function openBabySheet(b, firstRun = false) {
   const wu = prefs.weightUnit, lu = prefs.lengthUnit;
   openSheet(`<h2>${b ? 'Edit baby' : firstRun ? 'Welcome to CribSheet' : 'Add a baby'}</h2>${firstRun ? '<p class="sub">Add your baby to start logging. You can add more than one in Settings.</p>' : ''}<form id="baby-form">
     <div class="field"><label for="f-name">Name</label><input type="text" id="f-name" value="${esc(b ? b.name : '')}" autocomplete="off" required placeholder="Baby"></div>
     <div class="field"><label>Sex <span class="muted">(for growth percentiles)</span></label>${segHtml('b-sex', [['boy', 'Boy'], ['girl', 'Girl']], b ? b.sex : null, 'block')}</div>
     <div class="field"><label>Born</label><div class="pair"><input type="date" id="f-dob" value="${esc(b ? b.dob || '' : '')}" required><input type="time" id="f-tob" value="${esc(b ? b.tob || '' : '')}"></div><p class="hint">Time is optional. It makes the age on growth charts exact in the first days.</p></div>
+    <div class="field"><label>Photo <span class="muted">(optional)</span></label><div class="photo-row">${b && b.photo ? `<img class="avatar" id="f-photo-prev" src="${b.photo}" alt="">` : '<div class="avatar empty" id="f-photo-prev">☺</div>'}<div class="row wrap"><button class="btn" type="button" id="f-photo-btn">Choose photo</button><button class="btn ghost" type="button" id="f-photo-rm" ${b && b.photo ? '' : 'hidden'}>Remove</button></div><input type="file" id="f-photo" accept="image/*" hidden></div></div>
     ${b ? '' : `<fieldset class="fs"><legend>At birth (optional)</legend>
       <div class="field"><label>Weight</label>${wu === 'g' ? `<div class="with-unit"><input type="number" id="f-bg" inputmode="numeric" min="0" step="1" placeholder="0"><span class="unit">g</span></div>` : `<div class="pair"><div class="with-unit"><input type="number" id="f-blb" inputmode="numeric" min="0" step="1" placeholder="0"><span class="unit">lb</span></div><div class="with-unit"><input type="number" id="f-boz" inputmode="decimal" min="0" max="16" step="0.1" placeholder="0"><span class="unit">oz</span></div></div>`}</div>
       <div class="field"><label>Length and head circumference</label><div class="pair"><div class="with-unit"><input type="number" id="f-blen" inputmode="decimal" min="0" step="0.01" placeholder="Length"><span class="unit">${lu}</span></div><div class="with-unit"><input type="number" id="f-bhead" inputmode="decimal" min="0" step="0.01" placeholder="Head"><span class="unit">${lu}</span></div></div></div>
@@ -851,14 +1018,24 @@ function openBabySheet(b, firstRun = false) {
     ${b ? '<p class="hint">Birth measurements live in the log as the first measurement entry. Tap it there to change them.</p>' : ''}
     <div class="actions">${b ? (babies.length > 1 ? '<button class="btn danger" type="button" id="f-delbaby">Delete</button>' : '') : (firstRun ? '' : '<button class="btn" type="button" data-close>Cancel</button>')}<button class="btn primary" type="submit">${b ? 'Save' : 'Add baby'}</button></div></form>`, root => {
     wireSeg(root);
+    let photo;
+    $('#f-photo-btn', root).onclick = () => $('#f-photo', root).click();
+    $('#f-photo-rm', root).onclick = () => { photo = null; const pv = $('#f-photo-prev', root); const d = document.createElement('div'); d.className = 'avatar empty'; d.id = 'f-photo-prev'; d.textContent = '☺'; pv.replaceWith(d); $('#f-photo-rm', root).hidden = true; };
+    $('#f-photo', root).onchange = async ev => {
+      const f = ev.target.files[0]; if (!f) return;
+      try { photo = await shrinkPhoto(f); } catch (err) { toast('Could not read that photo'); return; }
+      const pv = $('#f-photo-prev', root); const img = document.createElement('img'); img.className = 'avatar'; img.id = 'f-photo-prev'; img.src = photo; img.alt = ''; pv.replaceWith(img); $('#f-photo-rm', root).hidden = false;
+      ev.target.value = '';
+    };
     $('#baby-form', root).onsubmit = ev => {
       ev.preventDefault();
       const name = $('#f-name', root).value.trim() || 'Baby', dob = $('#f-dob', root).value || null, tob = $('#f-tob', root).value || null;
+      const photoPatch = photo === undefined ? {} : { photo };
       const sex = segVal('b-sex', root);
       if (!sex) { toast('Pick boy or girl'); return; }
       if (!dob) { toast('Enter the birthdate'); return; }
-      if (b) { doWrite(store.updateBaby(b.id, { name, sex, dob, tob }), 'Saved'); closeSheet(); return; }
-      const nb = { id: uid(), name, sex, dob, tob, createdAt: Date.now() };
+      if (b) { doWrite(store.updateBaby(b.id, { name, sex, dob, tob, ...photoPatch }), 'Saved'); closeSheet(); return; }
+      const nb = { id: uid(), name, sex, dob, tob, ...photoPatch, createdAt: Date.now() };
       setPref('activeBaby', nb.id);
       doWrite(store.addBaby(nb), `Added ${name}`);
       let weightG = null;
@@ -875,7 +1052,7 @@ function openBabySheet(b, firstRun = false) {
 function openBabyChooser() {
   if (!babies.length) return openBabySheet(null, true);
   if (babies.length === 1) return openBabySheet(babies[0]);
-  openSheet(`<h2>Who are you logging for?</h2><div class="list" style="margin-top:8px">${babies.map(b => `<div class="li"><button class="entry" type="button" data-pick="${b.id}" style="padding:4px 0"><div class="body"><b>${esc(b.name)}${b.id === prefs.activeBaby ? ' ✓' : ''}</b><span>${ageText(b) || 'No birthdate'}</span></div></button><button class="btn" type="button" data-editb="${b.id}">Edit</button></div>`).join('')}</div>
+  openSheet(`<h2>Who are you logging for?</h2><div class="list" style="margin-top:8px">${babies.map(b => `<div class="li"><button class="entry" type="button" data-pick="${b.id}" style="padding:4px 0">${b.photo ? `<img class="avatar" src="${b.photo}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover">` : ''}<div class="body"><b>${esc(b.name)}${b.id === prefs.activeBaby ? ' ✓' : ''}</b><span>${ageText(b) || 'No birthdate'}</span></div></button><button class="btn" type="button" data-editb="${b.id}">Edit</button></div>`).join('')}</div>
     <div class="actions"><button class="btn" type="button" data-close>Close</button><button class="btn" type="button" id="chooser-add">Add a baby</button></div>`, root => {
     $$('[data-pick]', root).forEach(x => x.onclick = () => { setPref('activeBaby', x.dataset.pick); closeSheet(); renderAll(); });
     $$('[data-editb]', root).forEach(x => x.onclick = () => openBabySheet(babies.find(b => b.id === x.dataset.editb)));
@@ -889,12 +1066,12 @@ function download(name, text, type = 'text/plain') {
 }
 function csvEscape(v) { if (v == null) return ''; const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
 function exportCsv() {
-  const cols = ['type', 'baby', 'date', 'time', 'end_date', 'end_time', 'sleep_min', 'sleep_kind', 'left_min', 'right_min', 'start_side', 'end_side', 'amount_oz', 'amount_ml', 'contents', 'method', 'diaper', 'weight_g', 'weight_lb_oz', 'length_cm', 'length_in', 'head_cm', 'head_in', 'note'];
+  const cols = ['type', 'baby', 'date', 'time', 'end_date', 'end_time', 'sleep_min', 'sleep_kind', 'med', 'dose_ml', 'dose_mg', 'dose_text', 'dose_weight_kg', 'left_min', 'right_min', 'start_side', 'end_side', 'amount_oz', 'amount_ml', 'contents', 'method', 'diaper', 'weight_g', 'weight_lb_oz', 'length_cm', 'length_in', 'head_cm', 'head_in', 'note'];
   const rows = entries.slice().sort((a, b) => a.at - b.at).map(e => {
     const d = new Date(e.at), en = e.end ? new Date(e.end) : null;
     return {
       type: e.type, baby: e.babyId ? babyName(e.babyId) : '', date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-      end_date: en ? `${en.getFullYear()}-${pad(en.getMonth() + 1)}-${pad(en.getDate())}` : '', end_time: en ? `${pad(en.getHours())}:${pad(en.getMinutes())}` : '', sleep_min: e.type === 'sleep' && e.end ? Math.round((e.end - e.at) / 60000) : '', sleep_kind: e.type === 'sleep' ? (e.kind || 'nap') : '',
+      end_date: en ? `${en.getFullYear()}-${pad(en.getMonth() + 1)}-${pad(en.getDate())}` : '', end_time: en ? `${pad(en.getHours())}:${pad(en.getMinutes())}` : '', sleep_min: e.type === 'sleep' && e.end ? Math.round((e.end - e.at) / 60000) : '', sleep_kind: e.type === 'sleep' ? (e.kind || 'nap') : '', med: e.type === 'med' ? (e.name || '') : '', dose_ml: e.type === 'med' && e.ml != null ? trim(e.ml, 1) : '', dose_mg: e.type === 'med' && e.mg != null ? trim(e.mg, 1) : '', dose_text: e.type === 'med' ? (e.doseText || '') : '', dose_weight_kg: e.type === 'med' && e.weightKg ? trim(e.weightKg, 2) : '',
       left_min: hasNursing(e) ? trim((e.leftSec || 0) / 60, 1) : '', right_min: hasNursing(e) ? trim((e.rightSec || 0) / 60, 1) : '', start_side: e.startSide || '', end_side: e.endSide || '',
       amount_oz: e.ml ? trim(e.ml / OZ, 2) : '', amount_ml: e.ml ? Math.round(e.ml) : '', contents: e.ml ? (e.contents || '') : '', method: e.ml && e.type === 'feed' ? (e.method || 'bottle') : '', diaper: e.type === 'diaper' ? (e.kind || '') : '',
       weight_g: e.weightG != null ? Math.round(e.weightG) : '', weight_lb_oz: e.weightG != null ? fmtWeight(e.weightG, 'lb') : '', length_cm: e.lengthCm != null ? trim(e.lengthCm, 1) : '', length_in: e.lengthCm != null ? trim(e.lengthCm / IN, 2) : '', head_cm: e.headCm != null ? trim(e.headCm, 1) : '', head_in: e.headCm != null ? trim(e.headCm / IN, 2) : '', note: e.note || ''
