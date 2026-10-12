@@ -60,7 +60,7 @@ function applyTheme() { if (prefs.theme === 'auto') delete document.documentElem
 function clean(o) { const r = {}; for (const k in o) if (o[k] !== undefined) r[k] = o[k]; return r; }
 
 class LocalStore {
-  constructor() { this.mode = 'local'; this.entries = load('cs.entries', []); this.babies = load('cs.babies', []); this.listeners = []; this.ready = true; }
+  constructor() { this.mode = 'local'; this.entries = load('cs.entries', []); this.babies = load('cs.babies', []); this.listeners = []; this.ready = true; this.babiesReady = true; }
   async init() { }
   onChange(cb) { this.listeners.push(cb); cb(this.snapshot()); }
   snapshot() { return { entries: this.entries, babies: this.babies }; }
@@ -75,7 +75,7 @@ class LocalStore {
 }
 
 class CloudStore {
-  constructor(cfg, hid) { this.mode = 'cloud'; this.cfg = cfg; this.hid = hid; this.entries = []; this.babies = []; this.listeners = []; this.ready = false; this.error = null; this.unsubs = []; }
+  constructor(cfg, hid) { this.mode = 'cloud'; this.cfg = cfg; this.hid = hid; this.entries = []; this.babies = []; this.listeners = []; this.ready = false; this.babiesReady = false; this.error = null; this.unsubs = []; }
   async init() {
     const V = 'https://www.gstatic.com/firebasejs/10.14.1/';
     const [appM, authM, fsM] = await Promise.all([import(V + 'firebase-app.js'), import(V + 'firebase-auth.js'), import(V + 'firebase-firestore.js')]);
@@ -90,7 +90,7 @@ class CloudStore {
     });
     const col = n => fsM.collection(this.db, 'households', this.hid, n);
     this.unsubs.push(fsM.onSnapshot(col('entries'), s => { this.entries = s.docs.map(d => ({ id: d.id, ...d.data() })); this.ready = true; this.error = null; this.emit(); }, err => { this.error = err; this.emit(); }));
-    this.unsubs.push(fsM.onSnapshot(col('babies'), s => { this.babies = s.docs.map(d => ({ id: d.id, ...d.data() })); this.emit(); }, err => { this.error = err; this.emit(); }));
+    this.unsubs.push(fsM.onSnapshot(col('babies'), s => { this.babies = s.docs.map(d => ({ id: d.id, ...d.data() })); this.babiesReady = true; this.emit(); }, err => { this.error = err; this.emit(); }));
     fsM.setDoc(fsM.doc(this.db, 'households', this.hid), { touchedAt: Date.now() }, { merge: true }).catch(() => { });
   }
   stop() { this.unsubs.forEach(u => u()); this.unsubs = []; }
@@ -146,8 +146,10 @@ function onData(snap) {
   babies = snap.babies.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   if (!babies.find(b => b.id === prefs.activeBaby)) setPref('activeBaby', babies[0] ? babies[0].id : null);
   renderAll();
-  if (!babies.length && !promptedBaby && store && store.ready && !$('#sheetBg').classList.contains('open')) { promptedBaby = true; openBabySheet(null, true); }
+  if (babies.length && firstRunOpen) { closeSheet(); firstRunOpen = false; }
+  if (!babies.length && !promptedBaby && store && store.ready && store.babiesReady && !$('#sheetBg').classList.contains('open')) { promptedBaby = true; openBabySheet(null, true); }
 }
+let firstRunOpen = false;
 const activeBaby = () => babies.find(b => b.id === prefs.activeBaby) || null;
 const babyEntries = () => entries.filter(e => e.type === 'pump' || e.babyId === prefs.activeBaby);
 const babyName = id => (babies.find(b => b.id === id) || {}).name || '';
@@ -657,7 +659,7 @@ function openSheet(html, wire) {
   const first = $('input:not([type=hidden]):not([type=datetime-local]):not([type=date]), select', sheet);
   if (first && window.matchMedia('(min-width:600px)').matches) first.focus();
 }
-function closeSheet() { $('#sheetBg').classList.remove('open'); document.body.style.overflow = ''; if (sheetCleanup) { sheetCleanup(); sheetCleanup = null; } $('#sheet').innerHTML = ''; }
+function closeSheet() { firstRunOpen = false; $('#sheetBg').classList.remove('open'); document.body.style.overflow = ''; if (sheetCleanup) { sheetCleanup(); sheetCleanup = null; } $('#sheet').innerHTML = ''; }
 
 function segHtml(id, opts, val, cls = '') { return `<div class="seg ${cls}" id="${id}">${opts.map(o => `<button type="button" data-v="${o[0]}" aria-pressed="${String(o[0] === val)}">${o[1]}</button>`).join('')}</div>`; }
 function segVal(id, root) { const b = $(`#${id} button[aria-pressed="true"]`, root); return b ? b.dataset.v : null; }
@@ -1006,7 +1008,7 @@ function shrinkPhoto(file, size = 160) {
 }
 function openBabySheet(b, firstRun = false) {
   const wu = prefs.weightUnit, lu = prefs.lengthUnit;
-  openSheet(`<h2>${b ? 'Edit baby' : firstRun ? 'Welcome to CribSheet' : 'Add a baby'}</h2>${firstRun ? '<p class="sub">Add your baby to start logging. You can add more than one in Settings.</p>' : ''}<form id="baby-form">
+  openSheet(`<h2>${b ? 'Edit baby' : firstRun ? 'Welcome to CribSheet' : 'Add a baby'}</h2>${firstRun ? '<p class="sub">Add your baby to start logging. You can add more than one in Settings. If you already set one up, close this; it will appear once sync finishes.</p>' : ''}<form id="baby-form">
     <div class="field"><label for="f-name">Name</label><input type="text" id="f-name" value="${esc(b ? b.name : '')}" autocomplete="off" required placeholder="Baby"></div>
     <div class="field"><label>Sex <span class="muted">(for growth percentiles)</span></label>${segHtml('b-sex', [['boy', 'Boy'], ['girl', 'Girl']], b ? b.sex : null, 'block')}</div>
     <div class="field"><label>Born</label><div class="pair"><input type="date" id="f-dob" value="${esc(b ? b.dob || '' : '')}" required><input type="time" id="f-tob" value="${esc(b ? b.tob || '' : '')}"></div><p class="hint">Time is optional. It makes the age on growth charts exact in the first days.</p></div>
@@ -1016,7 +1018,8 @@ function openBabySheet(b, firstRun = false) {
       <div class="field"><label>Length and head circumference</label><div class="pair"><div class="with-unit"><input type="number" id="f-blen" inputmode="decimal" min="0" step="0.01" placeholder="Length"><span class="unit">${lu}</span></div><div class="with-unit"><input type="number" id="f-bhead" inputmode="decimal" min="0" step="0.01" placeholder="Head"><span class="unit">${lu}</span></div></div></div>
     </fieldset>`}
     ${b ? '<p class="hint">Birth measurements live in the log as the first measurement entry. Tap it there to change them.</p>' : ''}
-    <div class="actions">${b ? (babies.length > 1 ? '<button class="btn danger" type="button" id="f-delbaby">Delete</button>' : '') : (firstRun ? '' : '<button class="btn" type="button" data-close>Cancel</button>')}<button class="btn primary" type="submit">${b ? 'Save' : 'Add baby'}</button></div></form>`, root => {
+    <div class="actions">${b ? (babies.length > 1 ? '<button class="btn danger" type="button" id="f-delbaby">Delete</button>' : '') : `<button class="btn" type="button" data-close>${firstRun ? 'Close' : 'Cancel'}</button>`}<button class="btn primary" type="submit">${b ? 'Save' : 'Add baby'}</button></div></form>`, root => {
+    firstRunOpen = firstRun && !b;
     wireSeg(root);
     let photo;
     $('#f-photo-btn', root).onclick = () => $('#f-photo', root).click();
