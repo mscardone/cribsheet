@@ -1,0 +1,15 @@
+{
+  "name": "CribSheet by Cardone Medical Consulting",
+  "short_name": "CribSheet",
+  "description": "Simple baby tracker: feeds, diapers, pumping, and growth.",
+  "icons": [
+    { "src": "favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "favicon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "start_url": ".",
+  "scope": ".",
+  "theme_color": "#145C60",
+  "background_color": "#F5F3EC",
+  "display": "standalone",
+  "orientation": "portrait"
+}
