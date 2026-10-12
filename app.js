@@ -1184,6 +1184,46 @@ async function boot() {
   store.onChange(onData);
   if (cloudError) toast('Sync unavailable: ' + (cloudError.message || cloudError));
   if (timer && !document.hidden) $('#timerBanner').hidden = false;
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+  renderVersion();
+  setupUpdates();
+}
+
+// ---------- version and updates ----------
+const APP_VERSION = (self.CRIBSHEET_VERSION && self.CRIBSHEET_VERSION.version) || 'dev';
+const APP_BUILT = (self.CRIBSHEET_VERSION && self.CRIBSHEET_VERSION.built) || '';
+function renderVersion() {
+  const v = $('#verLine'); if (!v) return;
+  v.innerHTML = `CribSheet v${esc(APP_VERSION)}${APP_BUILT ? ' · built ' + esc(APP_BUILT) : ''}${store && store.mode === 'cloud' ? ' · synced' : ' · local only'}<button type="button" id="checkUpdate">Check for update</button>`;
+  $('#checkUpdate').onclick = async () => {
+    toast('Checking…');
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg) await reg.update();
+      const r = await fetch('version.js', { cache: 'no-store' }); const m = (await r.text()).match(/version:\s*'([^']+)'/);
+      if (m && m[1] !== APP_VERSION) showUpdate(m[1]); else if (!$('#updateBanner').hidden) { } else toast(`You have the latest version (v${APP_VERSION})`);
+    } catch { toast('Could not check right now'); }
+  };
+}
+let updateShown = false;
+function showUpdate(newVersion) {
+  const b = $('#updateBanner'); if (!b) return;
+  $('#updateText').textContent = newVersion && newVersion !== APP_VERSION ? `CribSheet v${newVersion} is ready (you have v${APP_VERSION}).` : 'A new version of CribSheet is ready.';
+  b.hidden = false; updateShown = true;
+}
+async function newVersionNumber() {
+  try { const r = await fetch('version.js', { cache: 'no-store' }); const m = (await r.text()).match(/version:\s*'([^']+)'/); return m ? m[1] : null; } catch { return null; }
+}
+function setupUpdates() {
+  if (!('serviceWorker' in navigator)) return;
+  $('#updateBanner').onclick = () => location.reload();
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    const watch = w => { if (!w) return; w.addEventListener('statechange', async () => { if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdate(await newVersionNumber()); }); };
+    watch(reg.installing);
+    reg.addEventListener('updatefound', () => watch(reg.installing));
+    // look for a new build when the app comes back to the foreground, and every hour while open
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => { }); });
+    setInterval(() => reg.update().catch(() => { }), 3600000);
+  }).catch(() => { });
+  navigator.serviceWorker.addEventListener('controllerchange', async () => { if (!updateShown) showUpdate(await newVersionNumber()); });
 }
 boot();

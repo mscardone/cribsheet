@@ -34,10 +34,15 @@ A static site has no server, so it cannot wake a closed app to send a push notif
 - `app.js`: all of the logic. No build step, no bundler.
 - `growth-data.js`: WHO growth standard LMS parameters (birth to 24 months, boys and girls) from the CDC data files, used to draw percentile curves and compute percentiles.
 - `firebase-config.js`: the Firebase web config that turns on sync. Blank it out for local-only mode.
+- `version.js`: the version number shown in the footer and used by the service worker to detect updates.
 - `sw.js`: service worker that caches the app for offline use.
 - `site.webmanifest`, `favicon*`, `apple-touch-icon.png`: install icons from the Cardone Medical Consulting brand package.
 - `brand/`: logo files used by the header and footer.
 - `.nojekyll`: tells GitHub Pages to serve the files as they are.
+
+## Releasing a new version
+
+Edit `version.js` and bump the version and date, then commit and push. The footer shows the version, and the service worker uses it as its cache name, so installed phones notice the change on their next launch or foreground (and hourly while open) and show an amber "new version is ready, Refresh" banner at the top. Tapping it reloads into the new build. Changes pushed without bumping `version.js` still arrive on the next normal reload, but without the banner.
 
 ## Publishing on GitHub Pages
 

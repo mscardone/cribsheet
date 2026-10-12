@@ -1,6 +1,7 @@
 /* CribSheet service worker: caches the app shell so it opens offline. */
-const VERSION = 'cribsheet-v2';
-const SHELL = ['./', './index.html', './app.js', './firebase-config.js', './growth-data.js', './site.webmanifest', './brand/cardone-symbol-white.svg', './brand/cardone-horizontal-white.svg', './favicon.svg', './favicon-192.png', './favicon-512.png', './apple-touch-icon.png'];
+importScripts('version.js');
+const VERSION = 'cribsheet-' + self.CRIBSHEET_VERSION.version;
+const SHELL = ['./', './index.html', './app.js', './firebase-config.js', './growth-data.js', './version.js', './site.webmanifest', './brand/cardone-symbol-white.svg', './brand/cardone-horizontal-white.svg', './favicon.svg', './favicon-192.png', './favicon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', ev => {
   ev.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -16,7 +17,7 @@ self.addEventListener('fetch', ev => {
   if (!sameOrigin && !firebaseSdk) return; // let Firestore and auth traffic through untouched
   if (sameOrigin) {
     // network first so updates land quickly, cache as the offline fallback
-    ev.respondWith(fetch(ev.request).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(ev.request, copy)); return res; })
+    ev.respondWith(fetch(ev.request, { cache: 'no-cache' }).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(ev.request, copy)); return res; })
       .catch(() => caches.match(ev.request).then(r => r || (ev.request.mode === 'navigate' ? caches.match('./index.html') : undefined))));
   } else {
     // SDK files are versioned, so cache first
