@@ -1,16 +1,15 @@
 /* CribSheet sync configuration.
  *
- * Leave this empty and CribSheet keeps a private log on each phone.
- * To share one log between phones, paste your Firebase web app config here
- * (Firebase console > Project settings > Your apps > SDK setup and configuration > Config).
- * Firebase web configs are safe to publish; access is controlled by your Firestore rules.
+ * This is the Firebase web app config for the CribSheet project. Firebase web
+ * configs are safe to publish; access is controlled by the Firestore rules and
+ * the household code. To run local-only instead, blank out apiKey and projectId.
  * See README.md for the full setup.
  */
 window.CRIBSHEET_FIREBASE = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyDze8NuitTolT_y5XZdFs1p0y9rkUWH0HY",
+  authDomain: "cribsheet-62322.firebaseapp.com",
+  projectId: "cribsheet-62322",
+  storageBucket: "cribsheet-62322.firebasestorage.app",
+  messagingSenderId: "18149300008",
+  appId: "1:18149300008:web:ca4f7fb82bc659c57fa21d"
 };

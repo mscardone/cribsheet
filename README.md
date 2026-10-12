@@ -17,7 +17,7 @@ Live site: https://projects.scottcardone.com/cribsheet/
 - **Growth** tab with a plain line chart for each measurement and the change since the last reading.
 - **Multiple babies** with a switcher in the header. Pumping is shared across babies.
 - **Export** to CSV for the pediatrician, JSON backup and restore, and dark mode for night feeds.
-- **Sync between phones** through your own free Firebase project (optional, see below).
+- **Sync between phones** through a free Firebase project, so both parents see the same log in real time.
 
 Every time field defaults to now and can be changed, so you can log something that happened earlier.
 
@@ -25,7 +25,7 @@ Every time field defaults to now and can be changed, so you can log something th
 
 - `index.html`: markup and styles.
 - `app.js`: all of the logic. No build step, no bundler.
-- `firebase-config.js`: paste your Firebase config here to turn on sync. Empty means local only.
+- `firebase-config.js`: the Firebase web config that turns on sync. Blank it out for local-only mode.
 - `sw.js`: service worker that caches the app for offline use.
 - `site.webmanifest`, `favicon*`, `apple-touch-icon.png`: install icons from the Cardone Medical Consulting brand package.
 - `brand/`: logo files used by the header and footer.
@@ -39,13 +39,21 @@ Every time field defaults to now and can be changed, so you can log something th
 
 On a phone, open the site in Safari or Chrome and use **Add to Home Screen**. It then runs full screen like an app.
 
-## Turning on sync (optional)
+## Sync between phones
 
-Without this, each phone keeps its own log. With it, every phone that joins the same household sees the same log in real time, and still works offline.
+Sync is already wired to the `CribSheet` Firebase project (`cribsheet-62322`), with anonymous sign-in enabled, Firestore in production mode, the rules below published, and `projects.scottcardone.com` and `mscardone.github.io` authorized. Nothing more to configure.
 
-1. Go to https://console.firebase.google.com and create a project (any name, Google Analytics can stay off).
-2. **Build > Authentication > Get started > Sign-in method**: enable **Anonymous**.
-3. **Build > Firestore Database > Create database**: pick a location near you and start in **production mode**.
+To use it: on one phone open **Settings > Sync between phones** and tap **Create household**. It shows an 8-character code. On the other phone tap **Join with code** and enter it. If a phone already has local entries, it offers to upload them. Both phones then see the same log in real time and keep working offline.
+
+The rules let any signed-in (anonymous) user read a household if they know its code, so the code acts as the password. It is random enough for a family log, but do not post it anywhere public.
+
+### Setting it up again from scratch
+
+If you ever need a fresh Firebase project (for example to hand this app to another family):
+
+1. Go to https://console.firebase.google.com and create a project. Google Analytics and Gemini can stay off.
+2. **Build > Authentication > Get started > Sign-in method**: enable **Anonymous**. Leave automatic clean-up off.
+3. **Build > Firestore Database > Create database**: pick a location and start in **production mode**.
 4. In **Firestore > Rules**, replace the rules with the block below and publish:
 
    ```
@@ -60,10 +68,10 @@ Without this, each phone keeps its own log. With it, every phone that joins the 
    ```
 
 5. **Project settings (gear icon) > Your apps > Add app > Web**. Give it a nickname, skip hosting, and copy the `firebaseConfig` values into `firebase-config.js`.
-6. Under **Authentication > Settings > Authorized domains**, add the domain the site is served from (for example `projects.scottcardone.com` or `<user>.github.io`).
-7. Commit and push. On one phone, open **Settings > Sync** and tap **Create household**. It shows an 8-character code. On the other phone, tap **Join with code** and enter it. If a phone already has local entries, it offers to upload them.
+6. Under **Authentication > Settings > Authorized domains**, add the domain the site is served from.
+7. Commit and push.
 
-The rules let any signed-in (anonymous) user read a household if they know its code, so the code acts as the password. It is random enough for a family log, but do not post it anywhere public.
+To run with no sync at all, blank out `apiKey` and `projectId` in `firebase-config.js`.
 
 ## Data model
 
