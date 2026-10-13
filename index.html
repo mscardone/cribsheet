@@ -14,9 +14,9 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
-<link rel="preload" href="brand/fonts/cribsheet-nunito-bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="brand/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="brand/fonts/nunito.css">
 <style>
-@font-face{font-family:"CribSheet Nunito";src:url("brand/fonts/cribsheet-nunito-bold.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
 :root{
   --teal:#145C60; --teal-dark:#0e4548; --teal-ink:#0c3436; --sea:#A7CEC7; --sea-light:#d7e9e5; --ivory:#F5F3EC;
   --bg:#F5F3EC; --card:#ffffff; --ink:#1f2b2b; --muted:#5f6b6a; --line:#dfe3dd; --soft:#eef1ec;
@@ -39,8 +39,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:16px;padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
-h1,h2,h3,.serif{font-family:Georgia,"Times New Roman",serif}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito",Arial,sans-serif;line-height:1.5;font-size:16px;padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+h1,h2,h3,.serif{font-family:"Nunito",Arial,sans-serif}
 a{color:var(--accent)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;touch-action:manipulation}
@@ -49,7 +49,7 @@ button{cursor:pointer;touch-action:manipulation}
 header.top{background:var(--teal);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 header.top .mark{width:40px;height:40px;flex:0 0 auto}
 header.top .title{display:flex;flex-direction:column;line-height:1.15;min-width:132px;overflow:hidden;flex:1 1 auto}
-header.top .title h1{margin:0;font-family:"CribSheet Nunito",Arial,sans-serif;font-size:1.7rem;letter-spacing:-.25px;font-weight:700;color:var(--ivory)}
+header.top .title h1{margin:0;font-family:"Nunito",Arial,sans-serif;font-size:1.7rem;letter-spacing:-.25px;font-weight:700;color:var(--ivory)}
 header.top .title span{font-size:.62rem;color:var(--sea);letter-spacing:1.3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .baby{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:6px 12px;text-align:right;line-height:1.2;max-width:min(44%,calc(100% - 196px));min-height:40px;min-width:0;flex:0 0 auto}
 header.top .baby{display:flex;align-items:center;gap:8px}
@@ -73,7 +73,7 @@ main{max-width:560px;margin:0 auto;padding:0 16px 24px}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin:12px 0;padding:14px 16px;overflow:hidden}
 .card h2{margin:0 0 8px;font-size:1.15rem;color:var(--teal-ink)}
-.card h2 small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:.75rem;color:var(--muted);font-weight:400;margin-left:6px;letter-spacing:.3px}
+.card h2 small{font-family:"Nunito",Arial,sans-serif;font-size:.75rem;color:var(--muted);font-weight:400;margin-left:6px;letter-spacing:.3px}
 .eyebrow{font-size:.7rem;color:var(--accent);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px}
 .muted{color:var(--muted)}
 .small{font-size:.85rem}
@@ -209,7 +209,7 @@ details.more[open]>summary::before{content:"–"}
 .medlist button.locked{opacity:.45;cursor:not-allowed;background:var(--soft)}
 .medlist button.locked:hover{border-color:var(--line)}
 .medlist button.locked span{color:var(--red)}
-.math{background:var(--soft);border-radius:12px;padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86rem;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.math{background:var(--soft);border-radius:12px;padding:10px 12px;font-family:"Nunito",Arial,sans-serif;font-variant-numeric:tabular-nums;font-size:.86rem;line-height:1.6;white-space:pre-wrap;word-break:break-word}
 .math b{font-size:1.15rem;color:var(--teal-ink)}
 .dose{display:flex;align-items:baseline;gap:10px;margin:8px 0 2px}
 .dose .big{font-size:2rem;font-weight:800;color:var(--teal-ink);font-variant-numeric:tabular-nums}
@@ -262,13 +262,13 @@ nav.tabs button[aria-selected="true"]{color:var(--accent)}
 /* Growth charts */
 .chart{width:100%;height:auto;display:block;margin:4px 0 0}
 .chart .grid{stroke:var(--line);stroke-width:1}
-.chart .axis{fill:var(--muted);font-size:10px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.chart .axis{fill:var(--muted);font-size:10px;font-family:"Nunito",Arial,sans-serif}
 .chart .line{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
 .chart .pt{fill:var(--card);stroke:var(--accent);stroke-width:2}
 .chart .last{fill:var(--accent)}
 .chart .pc{fill:none;stroke:var(--sea);stroke-width:1.4}
 .chart .pc.mid{stroke:var(--accent);stroke-width:1.8;stroke-dasharray:4 3}
-.chart .pl{fill:var(--muted);font-size:8.5px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.chart .pl{fill:var(--muted);font-size:8.5px;font-family:"Nunito",Arial,sans-serif}
 .chart .ptline{fill:none;stroke:var(--red);stroke-width:2;stroke-linejoin:round}
 .chart .pt.who{stroke:var(--red);fill:var(--card)}
 .chart .pt.who.last{fill:var(--red)}
@@ -288,8 +288,8 @@ nav.tabs button[aria-selected="true"]{color:var(--accent)}
 .status{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
 .status i{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
 .status.ok i{background:#2e9e6b}.status.warn i{background:var(--amber)}.status.bad i{background:var(--red)}
-code{background:var(--soft);padding:2px 6px;border-radius:6px;font-size:.9em}
-.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.3rem;letter-spacing:3px;font-weight:700;color:var(--teal-ink);background:var(--soft);padding:10px 14px;border-radius:12px;text-align:center;user-select:all;margin:8px 0}
+code{font-family:inherit;background:var(--soft);padding:2px 6px;border-radius:6px;font-size:.9em}
+.code{font-family:"Nunito",Arial,sans-serif;font-variant-numeric:tabular-nums;font-size:1.3rem;letter-spacing:3px;font-weight:700;color:var(--teal-ink);background:var(--soft);padding:10px 14px;border-radius:12px;text-align:center;user-select:all;margin:8px 0}
 
 footer{margin-top:28px;padding:22px 16px calc(22px + env(safe-area-inset-bottom));background:var(--teal);color:#fff}
 footer .inner{max-width:560px;margin:0 auto;font-size:.85rem;line-height:1.55}

@@ -1,7 +1,7 @@
 /* CribSheet service worker: caches the app shell so it opens offline. */
 importScripts('version.js');
 const VERSION = 'cribsheet-' + self.CRIBSHEET_VERSION.version;
-const SHELL = ['./', './index.html', './app.js', './firebase-config.js', './growth-data.js', './version.js', './site.webmanifest', './brand/cribsheet-symbol-ivory.svg', './brand/fonts/cribsheet-nunito-bold.woff2', './brand/cardone-horizontal-white.svg', './favicon.ico', './favicon.svg', './favicon-192.png', './favicon-512.png', './apple-touch-icon.png'];
+const SHELL = ['./', './index.html', './app.js', './firebase-config.js', './growth-data.js', './version.js', './site.webmanifest', './brand/cribsheet-symbol-ivory.svg', './brand/fonts/nunito.css', './brand/fonts/nunito-cyrillic-ext.woff2', './brand/fonts/nunito-cyrillic.woff2', './brand/fonts/nunito-vietnamese.woff2', './brand/fonts/nunito-latin-ext.woff2', './brand/fonts/nunito-latin.woff2', './brand/cardone-horizontal-white.svg', './favicon.ico', './favicon.svg', './favicon-192.png', './favicon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', ev => {
   ev.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
