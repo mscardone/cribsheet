@@ -486,9 +486,13 @@ function lmsValue(lms, z) { const [L, M, S] = lms; return L === 0 ? M * Math.exp
 function lmsZ(lms, x) { const [L, M, S] = lms; return L === 0 ? Math.log(x / M) / S : (Math.pow(x / M, L) - 1) / (L * S); }
 function normCdf(z) { const t = 1 / (1 + 0.2316419 * Math.abs(z)); const d = 0.3989423 * Math.exp(-z * z / 2); const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; }
 function percentileOf(sex, key, months, value) {
-  if (!WHO || !sex || months < 0 || months > 24) return null;
+  if (!WHO || !WHO[sex] || !WHO[sex][key] || value == null || !(value > 0)) return null;
+  // A reading stamped a little before the recorded birth time (birth weight entered without the time) counts as birth.
+  if (months < 0 && months > -1) months = 0;
+  if (months < 0 || months > 24) return null;
   const v = key === 'weightG' ? value / 1000 : value;
   const z = lmsZ(lmsAt(WHO[sex][key], months), v);
+  if (!isFinite(z)) return null;
   return Math.min(99.9, Math.max(0.1, normCdf(z) * 100));
 }
 function fmtPct(p) { if (p == null) return ''; if (p < 1) return '<1st percentile'; if (p > 99) return '>99th percentile'; const r = Math.round(p); return r + ordinal(r) + ' percentile'; }
