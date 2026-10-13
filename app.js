@@ -370,7 +370,7 @@ function renderHome() {
   $('#now').innerHTML = html;
   const ns = $('#nextside');
   if (timer) {
-    ns.innerHTML = `<span class="pill ${timer.side}">${sideName(timer.side).toUpperCase()}</span><span class="txt">Nursing now on the ${sideName(timer.side).toLowerCase()}. Tap the banner above to switch or finish.</span>`;
+    ns.innerHTML = `<span class="pill ${timer.side}">${sideName(timer.side).toUpperCase()}</span><span class="txt">${timer.paused ? 'Nursing paused on the ' : 'Nursing now on the '}${sideName(timer.side).toLowerCase()}. Tap the banner above to ${timer.paused ? 'resume' : 'pause'}, switch, or finish.</span>`;
   } else {
     const rec = recommendedSide(); const l = lastNurse();
     ns.innerHTML = `<span class="pill ${rec}">${sideName(rec).toUpperCase()}</span><span class="txt"><b>Start the next feed on the ${sideName(rec).toLowerCase()}.</b><br>${l ? `Last nursed starting on the ${sideName(l.startSide || 'L').toLowerCase()} at ${fmtTime(l.at)}${l.endSide ? ` and ended on the ${sideName(l.endSide).toLowerCase()}` : ''}.` : 'No nursing logged yet, so either side is fine.'}</span>`;
@@ -768,11 +768,12 @@ function openTimer() {
   const sup = timer.sup || {};
   openSheet(`<h2>Nursing</h2><p class="sub">Started ${fmtTime(timer.startedAt)} on the ${sideName(timer.startSide).toLowerCase()}</p>
     <div class="sides">
-      <div class="side L" id="t-L"><span class="lab">Left</span><span class="t" id="t-Lt">0:00</span></div>
-      <div class="side R" id="t-R"><span class="lab">Right</span><span class="t" id="t-Rt">0:00</span></div>
+      <button type="button" class="side L" id="t-L" data-side="L"><span class="lab">Left</span><span class="t" id="t-Lt">0:00</span><span class="st" id="t-Lst"></span></button>
+      <button type="button" class="side R" id="t-R" data-side="R"><span class="lab">Right</span><span class="t" id="t-Rt">0:00</span><span class="st" id="t-Rst"></span></button>
     </div>
-    <p class="total">Total <b id="t-tot">0:00</b></p>
-    <button class="btn big block" type="button" id="t-switch">Switch sides</button>
+    <p class="total">Total <b id="t-tot">0:00</b> <span class="muted" id="t-state"></span></p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Tap the running side to pause, tap it again to resume, or tap the other side to switch.</p>
+    <div class="grid2"><button class="btn big" type="button" id="t-pause">Pause</button><button class="btn big" type="button" id="t-switch">Switch sides</button></div>
     <details class="more" id="t-more" ${sup.amt ? 'open' : ''}><summary>Also gave a bottle or syringe</summary>${volumeFieldsHtml({ ml: sup.amt ? (sup.unit === 'ml' ? sup.amt : sup.amt * OZ) : null, unit: sup.unit, contents: sup.contents, method: sup.method }, 't')}</details>
     ${noteField(timer.note)}
     <div class="actions"><button class="btn danger" type="button" id="t-cancel">Cancel</button><button class="btn primary big" type="button" id="t-finish">Finish &amp; log</button></div>`, root => {
@@ -780,8 +781,10 @@ function openTimer() {
       if (!timer) return;
       const t = timerTotals();
       $('#t-Lt', root).textContent = mmss(t.L); $('#t-Rt', root).textContent = mmss(t.R); $('#t-tot', root).textContent = mmss(t.total);
-      $('#t-L', root).classList.toggle('on', timer.side === 'L'); $('#t-R', root).classList.toggle('on', timer.side === 'R');
+      for (const sd of ['L', 'R']) { const el = $('#t-' + sd, root); const active = timer.side === sd; el.classList.toggle('on', active && !timer.paused); el.classList.toggle('paused', active && !!timer.paused); $('#t-' + sd + 'st', root).textContent = active ? (timer.paused ? 'Paused' : 'Nursing') : ''; }
       $('#t-switch', root).textContent = 'Switch to ' + sideName(otherSide(timer.side)).toLowerCase();
+      $('#t-pause', root).textContent = timer.paused ? 'Resume' : 'Pause';
+      $('#t-state', root).textContent = timer.paused ? '· paused' : '';
     };
     paint();
     const iv = setInterval(paint, 500);
@@ -789,14 +792,17 @@ function openTimer() {
     wireSeg(root, (id, v) => { if (id === 't-unit') setPref('bottleUnit', v); remember(); });
     $('#t-amt', root).addEventListener('input', remember); $('#f-note', root).addEventListener('input', remember);
     $('#t-switch', root).onclick = () => { timerSwitch(); paint(); renderHome(); };
+    $('#t-pause', root).onclick = () => { timerPause(); paint(); renderHome(); };
+    $$('[data-side]', root).forEach(el => el.onclick = () => { if (el.dataset.side === timer.side) timerPause(); else timerSwitch(); paint(); renderHome(); });
     $('#t-finish', root).onclick = () => { remember(); timerFinish(readVolume(root, 't'), $('#f-note', root).value.trim() || null); closeSheet(); };
     $('#t-cancel', root).onclick = () => { if (confirm('Cancel this timer without logging?')) { timer = null; save('cs.timer', null); closeSheet(); renderHome(); } };
     return () => clearInterval(iv);
   });
 }
-function timerTotals() { if (!timer) return { L: 0, R: 0, total: 0 }; const cur = (Date.now() - timer.sideStart) / 1000; const L = timer.L + (timer.side === 'L' ? cur : 0), R = timer.R + (timer.side === 'R' ? cur : 0); return { L, R, total: L + R }; }
+function timerTotals() { if (!timer) return { L: 0, R: 0, total: 0 }; const cur = timer.paused ? 0 : (Date.now() - timer.sideStart) / 1000; const L = timer.L + (timer.side === 'L' ? cur : 0), R = timer.R + (timer.side === 'R' ? cur : 0); return { L, R, total: L + R }; }
+function timerPause() { if (!timer) return; const now = Date.now(); if (timer.paused) { timer.sideStart = now; timer.paused = false; } else { timer[timer.side] += (now - timer.sideStart) / 1000; timer.paused = true; timer.pausedAt = now; } save('cs.timer', timer); }
 function timerStart(side) { const now = Date.now(); timer = { babyId: prefs.activeBaby, startedAt: now, side, sideStart: now, startSide: side, L: 0, R: 0 }; save('cs.timer', timer); renderHome(); }
-function timerSwitch() { const now = Date.now(); timer[timer.side] += (now - timer.sideStart) / 1000; timer.side = otherSide(timer.side); timer.sideStart = now; save('cs.timer', timer); }
+function timerSwitch() { const now = Date.now(); if (!timer.paused) timer[timer.side] += (now - timer.sideStart) / 1000; timer.side = otherSide(timer.side); timer.sideStart = now; timer.paused = false; save('cs.timer', timer); }
 function timerFinish(vol, note) {
   const t = timerTotals();
   const e = { id: uid(), type: 'feed', babyId: timer.babyId, at: timer.startedAt, leftSec: Math.round(t.L), rightSec: Math.round(t.R), startSide: timer.startSide, endSide: timer.side, ...(vol || { ml: null }), note: note || null };
@@ -1168,7 +1174,7 @@ function wire() {
   // clock: timer banner and sleep button every second, relative times and reminders every 30 s
   let n = 0;
   setInterval(() => {
-    if (timer) { const t = timerTotals(); $('#bannerSide').textContent = sideName(timer.side); $('#bannerTime').textContent = mmss(t.total); }
+    if (timer) { const t = timerTotals(); $('#bannerSide').textContent = sideName(timer.side) + (timer.paused ? ' (paused)' : ''); $('#bannerTime').textContent = mmss(t.total); }
     const s = activeSleep(); if (s) $('#sleepSub').textContent = fmtDur((Date.now() - s.at) / 60000);
     if (++n % 30 === 0) { if ($('#view-home').classList.contains('active') && !$('#sheetBg').classList.contains('open')) renderHome(); else checkReminder(); }
   }, 1000);
