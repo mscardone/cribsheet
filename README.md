@@ -36,8 +36,8 @@ A static site has no server, so it cannot wake a closed app to send a push notif
 - `firebase-config.js`: the Firebase web config that turns on sync. Blank it out for local-only mode.
 - `version.js`: the version number shown in the footer and used by the service worker to detect updates.
 - `sw.js`: service worker that caches the app for offline use.
-- `site.webmanifest`, `favicon*`, `apple-touch-icon.png`: install icons from the Cardone Medical Consulting brand package.
-- `brand/`: logo files used by the header and footer.
+- `site.webmanifest`, `favicon*`, `apple-touch-icon.png`: CribSheet Swaddled C install icons.
+- `brand/`: CribSheet vector artwork and icon generator, plus the Cardone Medical Consulting footer logo. See `brand/BRANDING.md` for design details and regeneration instructions.
 - `.nojekyll`: tells GitHub Pages to serve the files as they are.
 
 ## Releasing a new version

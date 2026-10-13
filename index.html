@@ -46,15 +46,23 @@ button{cursor:pointer;touch-action:manipulation}
 /* Header */
 header.top{background:var(--teal);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 header.top .mark{width:40px;height:40px;flex:0 0 auto}
-header.top .title{display:flex;flex-direction:column;line-height:1.15;min-width:0;overflow:hidden;flex:1 1 auto}
-header.top .title h1{margin:0;font-size:1.45rem;letter-spacing:.4px;font-weight:700}
+header.top .title{display:flex;flex-direction:column;line-height:1.15;min-width:132px;overflow:hidden;flex:1 1 auto}
+header.top .title h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1.55rem;letter-spacing:-.5px;font-weight:700;color:var(--ivory)}
 header.top .title span{font-size:.62rem;color:var(--sea);letter-spacing:1.3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header.top .baby{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:6px 12px;text-align:right;line-height:1.2;max-width:44%;min-height:40px;flex:0 0 auto}
+header.top .baby{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:6px 12px;text-align:right;line-height:1.2;max-width:min(44%,calc(100% - 196px));min-height:40px;min-width:0;flex:0 0 auto}
 header.top .baby{display:flex;align-items:center;gap:8px}
 header.top .baby .txt{display:flex;flex-direction:column;min-width:0;text-align:right}
 header.top .baby .avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:1.5px solid rgba(255,255,255,.6);background:#fff}
 header.top .baby b{display:block;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .baby small{font-size:.72rem;color:var(--sea);letter-spacing:.5px;white-space:nowrap}
+
+@media(max-width:360px){
+  header.top{padding-left:12px;padding-right:12px;gap:8px}
+  header.top .mark{width:32px;height:36px}
+  header.top .title{min-width:120px}
+  header.top .title h1{font-size:1.4rem}
+  header.top .baby{padding-left:8px;padding-right:8px;max-width:calc(100% - 168px)}
+}
 
 main{max-width:560px;margin:0 auto;padding:0 16px 24px}
 @media(min-width:900px){main{max-width:720px}}
@@ -310,7 +318,7 @@ footer a{color:#fff}
 </svg>
 
 <header class="top">
-  <img class="mark" src="brand/cardone-symbol-white.svg" alt="Cardone Medical Consulting">
+  <img class="mark" src="brand/cribsheet-symbol-ivory.svg" alt="">
   <div class="title"><h1>CribSheet</h1><span>Feeds · Diapers · Growth · Sleep</span></div>
   <button class="baby" id="babyBtn" type="button" aria-label="Switch baby"><img class="avatar" id="babyPic" alt="" hidden><span class="txt"><b id="babyName">Set up baby</b><small id="babyAge">Tap to begin</small></span></button>
 </header>
