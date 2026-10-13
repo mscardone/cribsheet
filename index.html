@@ -14,7 +14,9 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
+<link rel="preload" href="brand/fonts/cribsheet-nunito-bold.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face{font-family:"CribSheet Nunito";src:url("brand/fonts/cribsheet-nunito-bold.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
 :root{
   --teal:#145C60; --teal-dark:#0e4548; --teal-ink:#0c3436; --sea:#A7CEC7; --sea-light:#d7e9e5; --ivory:#F5F3EC;
   --bg:#F5F3EC; --card:#ffffff; --ink:#1f2b2b; --muted:#5f6b6a; --line:#dfe3dd; --soft:#eef1ec;
@@ -47,7 +49,7 @@ button{cursor:pointer;touch-action:manipulation}
 header.top{background:var(--teal);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 header.top .mark{width:40px;height:40px;flex:0 0 auto}
 header.top .title{display:flex;flex-direction:column;line-height:1.15;min-width:132px;overflow:hidden;flex:1 1 auto}
-header.top .title h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1.55rem;letter-spacing:-.5px;font-weight:700;color:var(--ivory)}
+header.top .title h1{margin:0;font-family:"CribSheet Nunito",Arial,sans-serif;font-size:1.7rem;letter-spacing:-.25px;font-weight:700;color:var(--ivory)}
 header.top .title span{font-size:.62rem;color:var(--sea);letter-spacing:1.3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .baby{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:6px 12px;text-align:right;line-height:1.2;max-width:min(44%,calc(100% - 196px));min-height:40px;min-width:0;flex:0 0 auto}
 header.top .baby{display:flex;align-items:center;gap:8px}
@@ -60,7 +62,7 @@ header.top .baby small{font-size:.72rem;color:var(--sea);letter-spacing:.5px;whi
   header.top{padding-left:12px;padding-right:12px;gap:8px}
   header.top .mark{width:32px;height:36px}
   header.top .title{min-width:120px}
-  header.top .title h1{font-size:1.4rem}
+  header.top .title h1{font-size:1.5rem}
   header.top .baby{padding-left:8px;padding-right:8px;max-width:calc(100% - 168px)}
 }
 
